@@ -2,8 +2,14 @@ import random
 import time
 
 # Notes:
-# assume all player stats are 10, no proficiency bonuses, 15hp for player, no zombie undead fortitude
+# player is a basic level 1 fighter based off of dnd 5e, standard array stats of 16 strength, 11 dexterity,
+# 14 constitution, 13 intelligence, 9 wisdom, and 15 charisma. no zombie undead fortitude
 # possibly for undead, bool class variable in Game, if true on death roll for effect, add hp if succeeds?
+# TODO:long rest to heal, maybe in the continue loop ask and implement effects, xp, loot (coins, weapons, potions).
+#  have potions in and called from inventory.
+#  some sort of check for ac and damage values dependent on gear. Possible end statistic message after death/quitting
+#  make continue function to call after battles/interactions. need to create loot table for monsters.
+#  add function to decide if combat, found item, or merchant after continue and those interactions
 
 
 class Game:
@@ -13,6 +19,8 @@ class Game:
     crit_fail = False
     user_input = 'INVALID'  # initialize as the error message to allow player_act to start correctly
     damage = 0
+    cont = True  # bool to continue adventure or not
+    cont_check = 'Invalid'  # initialize as error so function loops properly
 
     def __init__(self):
         self.action = ''  # action placeholder
@@ -51,6 +59,8 @@ class Game:
                     print(f'{Monster.monster} is critically wounded!\n')
                 elif Monster.mon_hp <= 0:
                     print(f'{Monster.monster} has been killed!')
+                    Game.cont = False  # allows continue check to set continue variable and not be skipped
+                    continue_check()
                 else:
                     print(f'{Monster.monster} seems fine!\n')  # default message for above half hp
             else:
@@ -92,6 +102,7 @@ class Game:
                 print('You are critically wounded!\n')
             elif Player.hp <= 0:
                 print('You have died!')
+                Game.cont = False
             else:
                 print('You\'re ok!\n')
         else:
@@ -99,12 +110,13 @@ class Game:
 
 
 class Player:  # set base stats for the player. May add complexity in the future if needed
-    ac = 14
-    hp = 15
-    start_hp = 15
-    p_attack = 0
-    p_damage = 0
+    ac = 19
+    hp = 12
+    start_hp = 12
     potion = 3
+    inventory = {"Armor": ["Chain Mail"], "Weapons": ['Shortsword', 'Shield'],
+                 "Currency": {"Gold": 15, "Silver": 0, "Copper": 0},
+                 "Potions": 3}  # dictionary to act as player inventory
 
     def __init__(self):
         pass
@@ -121,7 +133,7 @@ class Monster:
     def __init__(self):
         pass
 
-    def type(self, monster):  # takes call from main with monster being rolled in main. sets class stats for monster
+    def type(monster):  # takes call from main with monster being rolled in main. sets class stats for monster
         if monster == 1:
             Monster.monster = 'Kenku'
             Monster.mon_hp = 13
@@ -176,7 +188,7 @@ def attack_roll(attacker):  # used by both player and monsters to roll the attac
     crit_check()  # checks for critical hits
     match attacker:  # switch statement to add the appropriate modifier to the attacker's roll
         case 'Player':
-            Game.attack = attack
+            Game.attack = attack + 5  # possibly need to adapt for stat increases due to leveling or weapon
         case 'Kenku':
             Game.attack = attack + 5
         case 'Zombie':
@@ -190,7 +202,7 @@ def attack_roll(attacker):  # used by both player and monsters to roll the attac
 def damage_roll(attacker):  # used by both player and monsters to roll for damage
     match attacker:  # rolls the appropriate damage dice depending on the attacker
         case 'Player':
-            Game.damage = random.randint(1, 6)
+            Game.damage = random.randint(1, 6) + 3  # this needs to be dependent on weapon & stats
         case 'Kenku':
             Game.damage = random.randint(1, 6) + 3
         case 'Zombie':
@@ -211,3 +223,23 @@ def error_check(user):  # ensures the input is either a, h, attack, or heal and 
     else:  # triggers the loop in player act so that input is requested until a valid input is entered
         Game.user_input = 'INVALID'
         print('You\'re in battle stop messing around!\n')
+
+
+def get_monster():
+    Monster.type(random.randint(1, 4))
+
+
+def continue_check():  # called to ask player
+    while Game.cont_check == "Invalid":
+        check = input("Would you like to continue? Y or N?\n")
+        check = check.lower()
+        if check == 'y' or check == 'yes':
+            Game.cont_check = "yes"
+            Game.cont = True
+            print("Taking a rest while it is safe to recover...\n")
+            Player.hp = Player.start_hp  # fully heals player
+        elif check == 'n' or check == 'no':
+            Game.cont_check = "no"
+            Game.cont = False
+        else:
+            print("Try that again!\n")
